@@ -3,7 +3,7 @@ import torch
 import random
 import numpy as np
 
-from EETQ import quant_weights, preprocess_weights, w8_a16_gemm
+from EETQ import quant_weights, preprocess_weights, w8_a16_gemm, dequantize_weight
 
 def set_random_seed(seed):
     random.seed(seed)
@@ -13,9 +13,9 @@ def set_random_seed(seed):
     np.random.seed(seed)
 
 if __name__ == '__main__':
-    M = 1
-    N = 13824
-    K = 5120
+    M = 128
+    N = 128
+    K = 128
 
     set_random_seed(1)
     input = torch.rand(M, K, dtype=torch.float16).cuda()
@@ -30,30 +30,36 @@ if __name__ == '__main__':
     print("processed_torch_weights: ", processed_torch_weights)
     processed_torch_weights = processed_torch_weights.cuda()
     torch_weight_scales = torch_weight_scales.cuda()
-    output = w8_a16_gemm(input, processed_torch_weights, torch_weight_scales)
-    print("out1: ", output)
+    dequantized_weight = torch.zeros_like(ref_torch_weights, dtype=torch.float16).cuda()
+    print(dequantized_weight.shape, ref_torch_weights.shape)
+    dequantize_weight(dequantized_weight, processed_torch_weights, torch_weight_scales)
+    print(dequantized_weight)
+    # processed_torch_weights = processed_torch_weights.cuda()
+    # torch_weight_scales = torch_weight_scales.cuda()
+    # output = w8_a16_gemm(input, processed_torch_weights, torch_weight_scales)
+    # print("out1: ", output)
 
-    # test preprocess_weights
-    processed_w = preprocess_weights(ref_torch_weights)
-    print("processed_w: ", processed_w)
-    processed_w = processed_w.cuda()
-    output = w8_a16_gemm(input, processed_w, torch_weight_scales)
-    print("out2: ", output)
+    # # test preprocess_weights
+    # processed_w = preprocess_weights(ref_torch_weights)
+    # print("processed_w: ", processed_w)
+    # processed_w = processed_w.cuda()
+    # output = w8_a16_gemm(input, processed_w, torch_weight_scales)
+    # print("out2: ", output)
 
-    # test torch matmul
-    ref_torch_weights = ref_torch_weights.to(torch.float16).cuda()
-    print("ref_torch_weights fp16: ", ref_torch_weights * torch_weight_scales)
-    torch_weights_cuda = torch_weights_cpu.cuda().to(torch.float16)
-    out_torch = torch.matmul(input, torch_weights_cuda)
-    print("out torch: ", out_torch)
+    # # test torch matmul
+    # ref_torch_weights = ref_torch_weights.to(torch.float16).cuda()
+    # print("ref_torch_weights fp16: ", ref_torch_weights * torch_weight_scales)
+    # torch_weights_cuda = torch_weights_cpu.cuda().to(torch.float16)
+    # out_torch = torch.matmul(input, torch_weights_cuda)
+    # print("out torch: ", out_torch)
 
 
-    torch.cuda.synchronize()
-    t1 = time.perf_counter()
-    for i in range(500):
-        output = w8_a16_gemm(input, processed_torch_weights, torch_weight_scales)
-    torch.cuda.synchronize()
-    print(output)
-    print(torch.sum(output - out_torch))
-    t2 = time.perf_counter()
-    print("time: ", (t2 - t1) / 100)
+    # torch.cuda.synchronize()
+    # t1 = time.perf_counter()
+    # for i in range(500):
+    #     output = w8_a16_gemm(input, processed_torch_weights, torch_weight_scales)
+    # torch.cuda.synchronize()
+    # print(output)
+    # print(torch.sum(output - out_torch))
+    # t2 = time.perf_counter()
+    # print("time: ", (t2 - t1) / 100)
