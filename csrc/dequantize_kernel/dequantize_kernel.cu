@@ -6,24 +6,36 @@
 #include "dequantize_kernel.h"
 #include <iostream>
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> dd63c5519ee5d0fb5017c7ed06b32758cc095bef
 template<typename result_type = cutlass::Array<half, 4>, typename source_type = cutlass::Array<uint8_t, 4>>
 __device__ static result_type convert(source_type const& source)
 {
     result_type result;
 
+<<<<<<< HEAD
 
     uint32_t*      h   = reinterpret_cast<uint32_t*>(&result);
     uint32_t const i8s = reinterpret_cast<uint32_t const&>(source);
 
 
+=======
+    uint32_t*      h   = reinterpret_cast<uint32_t*>(&result);
+    uint32_t const i8s = reinterpret_cast<uint32_t const&>(source);
+
+>>>>>>> dd63c5519ee5d0fb5017c7ed06b32758cc095bef
     static constexpr uint32_t mask_for_elt_01     = 0x5250;
     static constexpr uint32_t mask_for_elt_23     = 0x5351;
     static constexpr uint32_t start_byte_for_fp16 = 0x64646464;
     asm volatile("prmt.b32 %0,%1,%2,%3;\n" : "=r"(h[0]) : "r"(i8s), "n"(start_byte_for_fp16), "n"(mask_for_elt_01));
     asm volatile("prmt.b32 %0,%1,%2,%3;\n" : "=r"(h[1]) : "r"(i8s), "n"(start_byte_for_fp16), "n"(mask_for_elt_23));
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> dd63c5519ee5d0fb5017c7ed06b32758cc095bef
     static constexpr uint32_t I8s_TO_F16s_MAGIC_NUM = 0x64806480;
     asm volatile("sub.f16x2 %0, %1, %2;\n" : "=r"(h[0]) : "r"(h[0]), "r"(I8s_TO_F16s_MAGIC_NUM));
     asm volatile("sub.f16x2 %0, %1, %2;\n" : "=r"(h[1]) : "r"(h[1]), "r"(I8s_TO_F16s_MAGIC_NUM));
@@ -31,6 +43,7 @@ __device__ static result_type convert(source_type const& source)
 }
 
 
+<<<<<<< HEAD
 __device__ const int reverse_permutation[32] = {0, 1, 4, 5, 8, 9, 12, 13,
                                  2, 3, 6, 7, 10, 11, 14, 15,
                                  16, 17, 20, 21, 24, 25, 28, 29,
@@ -41,10 +54,22 @@ template<const int THREAD_NUM=256, const int TILE_DIM = 32>
 __global__ void transpose_row_interleave_scale(const half *A, half *B, const half *scale, int m, int n)
 {
     
+=======
+template<const int TILE_DIM = 32>
+__global__ void transpose_row_interleave_scale(const half *A, half *B, const half *scale, int m, int n)
+{
+    const int permutation[32] = {0, 1, 8, 9, 2, 3, 10, 11,
+                                 4, 5, 12, 13, 6, 7, 14, 15,
+                                 16, 17, 24, 25, 18, 19, 26, 27,
+                                 20, 21, 28, 29, 22, 23, 30, 31};
+
+
+>>>>>>> dd63c5519ee5d0fb5017c7ed06b32758cc095bef
     __shared__ half S[TILE_DIM][TILE_DIM + 1];
     int bx = blockIdx.x * TILE_DIM;
     int by = blockIdx.y * TILE_DIM;
 
+<<<<<<< HEAD
     const int NUM_ITERS = TILE_DIM * TILE_DIM / THREAD_NUM;
     const int NUM_ROWS = THREAD_NUM / TILE_DIM;
 
@@ -71,18 +96,46 @@ __global__ void transpose_row_interleave_scale(const half *A, half *B, const hal
         {
             B[ny2 * m + nx2] = S[thread_col][permuted_row] * scale[nx2];
         }
+=======
+
+    int nx1 = bx + threadIdx.x;
+    int ny1 = by + threadIdx.y;
+    if (nx1 < n && ny1 < m)
+    {
+        S[threadIdx.y][threadIdx.x] = A[ny1 * n + nx1];
+    }
+    __syncthreads();
+
+
+
+    int nx2 = by + threadIdx.x;
+    int ny2 = bx + permutation[threadIdx.y];
+
+
+    if (nx2 < m && ny2 < n)
+    {
+        B[ny2 * m + nx2] = S[threadIdx.x][threadIdx.y] * scale[nx2];
+>>>>>>> dd63c5519ee5d0fb5017c7ed06b32758cc095bef
     }
 }
 
 
 
+<<<<<<< HEAD
 
 __global__ void permute_cast(half* dequantized_weight, const uint8_t* weight, int m, int n){
+=======
+__global__ void dequantize_kernel(half* dequantized_weight, const uint8_t* weight, int m, int n){
+>>>>>>> dd63c5519ee5d0fb5017c7ed06b32758cc095bef
     half* out = &dequantized_weight[blockIdx.x * n];
     const uint8_t* in = &weight[blockIdx.x * n];
     const int interleave_block_size = 64;
     const int block_per_row = n / interleave_block_size;
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> dd63c5519ee5d0fb5017c7ed06b32758cc095bef
     for(int i = threadIdx.x; i * 4 < n; i += blockDim.x){
         cutlass::Array<half, 4> output;
         
@@ -92,9 +145,17 @@ __global__ void permute_cast(half* dequantized_weight, const uint8_t* weight, in
         int global_index      = blockIdx.x * block_per_row + col_index;
         int is_second         = global_index % 2;
 
+<<<<<<< HEAD
         int origin_row        = global_index / (block_per_row * 2) * 2 + is_second;
         int origin_col        = (global_index / 2) % block_per_row;
 
+=======
+
+        int origin_row        = global_index / (block_per_row * 2) * 2 + is_second;
+        int origin_col        = (global_index / 2) % block_per_row;
+
+
+>>>>>>> dd63c5519ee5d0fb5017c7ed06b32758cc095bef
         output = convert(reinterpret_cast<const uint32_t*>(&in[col_offset_global])[0]);
         uint64_t* t = reinterpret_cast<uint64_t*>(&output);
         
@@ -104,7 +165,10 @@ __global__ void permute_cast(half* dequantized_weight, const uint8_t* weight, in
 }
 
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> dd63c5519ee5d0fb5017c7ed06b32758cc095bef
 void invoke_dequantize(half* dequantized_weight,
                        const uint8_t*     weight,
                        const half*        scale,
@@ -115,12 +179,20 @@ void invoke_dequantize(half* dequantized_weight,
     cudaMalloc(&tmp, m * n * sizeof(half));
     dim3 block(std::min(256, m / 4));
     dim3 grid(n);
+<<<<<<< HEAD
     permute_cast<<<grid, block>>>(tmp, weight, n, m);
 
 
 
     constexpr int BLOCK_SZ = 32;
     dim3 block_0(256);
+=======
+    dequantize_kernel<<<grid, block>>>(tmp, weight, n, m);
+
+
+    constexpr int BLOCK_SZ = 32;
+    dim3 block_0(BLOCK_SZ, BLOCK_SZ);
+>>>>>>> dd63c5519ee5d0fb5017c7ed06b32758cc095bef
     dim3 grid_0((m + BLOCK_SZ - 1) / BLOCK_SZ, (n + BLOCK_SZ - 1) / BLOCK_SZ);
     transpose_row_interleave_scale<<<grid_0, block_0>>>(tmp, dequantized_weight, scale, n, m);
     // cudaMemcpy(dequantized_weight, tmp, m * n * sizeof(half), cudaMemcpyDeviceToDevice);
